@@ -6,6 +6,7 @@ import emissary.config.Configurator;
 import emissary.config.ServiceConfigGuide;
 import emissary.core.EmissaryException;
 import emissary.core.MetricsManager;
+import emissary.core.MobileAgent;
 import emissary.core.ResourceWatcher;
 import emissary.core.sentinel.Sentinel;
 import emissary.pool.AgentPool;
@@ -82,6 +83,8 @@ public class EmissaryNode {
     protected String nodeServiceType = null;
 
     protected boolean strictStartupMode = false;
+
+    protected boolean logAgentTime = false;
 
     /**
      * Construct the node. The node name and port are from system properties. The node type is based on the os.name in this
@@ -246,6 +249,7 @@ public class EmissaryNode {
     public void configureEmissaryServer() throws EmissaryException {
         // Create the core objects we need to get going
         // The AgentPool
+        MobileAgent.setLogTimeFunction(() -> this.logAgentTime);
         AgentPool pool = new AgentPool(new MobileAgentFactory());
         logger.debug("Setup AgentPool with {} agents...", pool.getNumIdle());
 

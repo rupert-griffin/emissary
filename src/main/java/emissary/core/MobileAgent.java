@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 /**
@@ -88,6 +89,8 @@ public abstract class MobileAgent implements IMobileAgent, MobileAgentMBean {
 
     // Track moveErrors on all parts of a given payload
     protected int moveErrorsOccurred = 0;
+
+    protected static Supplier<Boolean> getLogTimeStatus = () -> false;
 
     /**
      * Still have an uncaught exception handler but not really in a true ThreadGroup with other agents
@@ -211,6 +214,9 @@ public abstract class MobileAgent implements IMobileAgent, MobileAgentMBean {
      */
     protected synchronized void setPayload(@Nullable final IBaseDataObject p) {
         this.payload = p;
+        if (p != null) {
+            p.setLogTimeStatus(MobileAgent.getLogTimeStatus.get());
+        }
     }
 
     /**
@@ -275,6 +281,7 @@ public abstract class MobileAgent implements IMobileAgent, MobileAgentMBean {
             // our mission. We dont process there, just use it to call through
             // to the directory, so skip the processing. See the difference
             // between the go() and arrive() methods for details
+
             if ((loopCount > 1 || getProcessFirstPlace()) && !controlError) {
                 atPlace(currentPlace, mypayload);
             }
@@ -833,6 +840,11 @@ public abstract class MobileAgent implements IMobileAgent, MobileAgentMBean {
             }
         }
 
+        if (payloadArg.logTimeStatusIsOn()) {
+            double timeInMs = payloadArg.getTimeInPlaceAndReset() / 1e6; // nanoseconds -> milliseconds
+            placeKey = String.format("%.2f::%s", timeInMs, placeKey);
+        }
+
         payloadArg.appendTransformHistory(placeKey);
 
         logger.debug("Appended {} to history which now has size {}", placeKey, payloadArg.transformHistory().size());
@@ -907,5 +919,9 @@ public abstract class MobileAgent implements IMobileAgent, MobileAgentMBean {
     @Override
     public void setMaxItinerarySteps(final int value) {
         this.maxItinerarySteps = value;
+    }
+
+    public static void setLogTimeFunction(Supplier<Boolean> newLogTimeFunction) {
+        MobileAgent.getLogTimeStatus = newLogTimeFunction;
     }
 }

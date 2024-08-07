@@ -192,6 +192,13 @@ public class BaseDataObject implements Serializable, Cloneable, Remote, IBaseDat
     @Nullable
     protected SeekableByteChannelFactory seekableByteChannelFactory;
 
+    /***
+     * Checks if the amount of time an object spends in a place should be recorded to its transform history
+     */
+    private boolean logTimeStatus = false;
+
+    private long timeInPlace = 0;
+
     final SafeUsageChecker safeUsageChecker = new SafeUsageChecker();
 
     protected enum DataState {
@@ -1504,5 +1511,31 @@ public class BaseDataObject implements Serializable, Cloneable, Remote, IBaseDat
     @Override
     public void setTransactionId(String transactionId) {
         this.transactionId = transactionId;
+    }
+
+    @Override
+    public boolean logTimeStatusIsOn() {
+        return this.logTimeStatus;
+    }
+
+    @Override
+    public void setLogTimeStatus(boolean newStatus) {
+        logTimeStatus = newStatus;
+    }
+
+    public long getTimeInPlaceAndReset() {
+        long time = getTimeInPlace();
+        setTimeInPlace(0);
+        return time;
+    }
+
+    @Override
+    public long getTimeInPlace() {
+        return timeInPlace;
+    }
+
+    @Override
+    public void setTimeInPlace(long newTime) {
+        timeInPlace = newTime;
     }
 }

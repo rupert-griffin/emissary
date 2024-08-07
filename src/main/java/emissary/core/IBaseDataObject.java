@@ -924,4 +924,19 @@ public interface IBaseDataObject {
      * @param transactionId the unique identifier of the transaction
      */
     void setTransactionId(String transactionId);
+
+    boolean logTimeStatusIsOn();
+
+    void setLogTimeStatus(boolean newStatus);
+
+    /***
+     * Get the amount of time spent in a given place
+     *
+     * @return Time in nanoseconds
+     */
+    long getTimeInPlace();
+
+    long getTimeInPlaceAndReset();
+
+    void setTimeInPlace(long newTime);
 }
