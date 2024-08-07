@@ -525,10 +525,10 @@ public abstract class ServiceProviderPlace implements IServiceProviderPlace,
     @Override
     public void agentProcessCall(IBaseDataObject payload) throws ResourceException {
         try {
-            long time = payload.logTimeStatusIsOn() ? System.nanoTime() : 0;
+            long time = payload.logTimeStatusIsOn() ? System.currentTimeMillis() : 0;
             process(payload);
             if (payload.logTimeStatusIsOn()) {
-                payload.setTimeInPlace(System.nanoTime() - time);
+                payload.setTimeInPlace(System.currentTimeMillis() - time);
             }
             rehash(payload);
         } catch (ResourceException r) {
@@ -592,10 +592,10 @@ public abstract class ServiceProviderPlace implements IServiceProviderPlace,
         MDC.put(MDCConstants.SHORT_NAME, payload.shortName());
         MDC.put(MDCConstants.SERVICE_LOCATION, this.getKey());
         try {
-            long time = payload.logTimeStatusIsOn() ? System.nanoTime() : 0;
+            long time = payload.logTimeStatusIsOn() ? System.currentTimeMillis() : 0;
             List<IBaseDataObject> l = processHeavyDuty(payload);
             if (payload.logTimeStatusIsOn()) {
-                payload.setTimeInPlace(System.nanoTime() - time);
+                payload.setTimeInPlace(System.currentTimeMillis() - time);
             }
             payload.checkForUnsafeDataChanges();
             rehash(payload);
