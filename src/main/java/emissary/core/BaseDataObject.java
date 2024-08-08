@@ -24,9 +24,11 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.SeekableByteChannel;
 import java.rmi.Remote;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -197,7 +199,7 @@ public class BaseDataObject implements Serializable, Cloneable, Remote, IBaseDat
      */
     private boolean logTimeStatus = false;
 
-    private long timeInPlace = 0;
+    private long timeLog = 0;
 
     final SafeUsageChecker safeUsageChecker = new SafeUsageChecker();
 
@@ -1514,28 +1516,43 @@ public class BaseDataObject implements Serializable, Cloneable, Remote, IBaseDat
     }
 
     @Override
-    public boolean logTimeStatusIsOn() {
+    public void setLogTimeStatus(boolean newStatus) {
+        this.logTimeStatus = newStatus;
+    }
+
+    @Override
+    public boolean getLogTimeStatus() {
         return this.logTimeStatus;
     }
 
     @Override
-    public void setLogTimeStatus(boolean newStatus) {
-        logTimeStatus = newStatus;
-    }
-
-    public long getTimeInPlaceAndReset() {
-        long time = getTimeInPlace();
-        setTimeInPlace(0);
-        return time;
+    public String getTimeLog(String formatting) {
+        Date time = new Date(this.timeLog);
+        return new SimpleDateFormat(formatting).format(time.getTime());
     }
 
     @Override
-    public long getTimeInPlace() {
-        return timeInPlace;
+    public void startTimer() {
+        if (this.logTimeStatus) {
+            if (this.timeLog != 0 && logger.isWarnEnabled()) {
+                logger.warn("IBDO timer should be reset before it's started.");
+            }
+            this.timeLog = System.currentTimeMillis();
+        }
     }
 
     @Override
-    public void setTimeInPlace(long newTime) {
-        timeInPlace = newTime;
+    public void endTimer() {
+        if (this.logTimeStatus) {
+            if (this.timeLog == 0 && logger.isWarnEnabled()) {
+                logger.warn("Attempting to end IBDO timer without starting it.");
+            }
+            this.timeLog = System.currentTimeMillis() - this.timeLog;
+        }
+    }
+
+    @Override
+    public void resetTimer() {
+        this.timeLog = 0;
     }
 }

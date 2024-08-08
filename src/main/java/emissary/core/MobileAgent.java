@@ -16,9 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
-import java.util.Date;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
@@ -842,10 +840,10 @@ public abstract class MobileAgent implements IMobileAgent, MobileAgentMBean {
             }
         }
 
-        if (payloadArg.logTimeStatusIsOn()) {
-            Date time = new Date(payloadArg.getTimeInPlaceAndReset());
-            String formattedTime = new SimpleDateFormat("HH:mm:ss:SSS").format(time.getTime());
-            placeKey = formattedTime + "_" + placeKey;
+        if (payloadArg.getLogTimeStatus()) {
+            String time = payloadArg.getTimeLog("HH:mm:ss:SSS");
+            placeKey = String.join("___", time, placeKey);
+            payloadArg.resetTimer();
         }
 
         payloadArg.appendTransformHistory(placeKey);

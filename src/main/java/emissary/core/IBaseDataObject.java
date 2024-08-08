@@ -925,18 +925,17 @@ public interface IBaseDataObject {
      */
     void setTransactionId(String transactionId);
 
-    boolean logTimeStatusIsOn();
+    // boolean logTimeStatusIsOn();
 
     void setLogTimeStatus(boolean newStatus);
 
-    /***
-     * Get the amount of time spent in a given place
-     *
-     * @return Time in nanoseconds
-     */
-    long getTimeInPlace();
+    boolean getLogTimeStatus();
 
-    long getTimeInPlaceAndReset();
+    String getTimeLog(String formatting);
 
-    void setTimeInPlace(long newTime);
+    void startTimer();
+
+    void endTimer();
+
+    void resetTimer();
 }
