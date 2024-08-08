@@ -80,7 +80,7 @@ public class HDMobileAgent extends MobileAgent {
             super.setPayload(null);
             return;
         }
-        p.setLogTimeStatus(getLogTimeStatus.get());
+        p.setTimeLoggingStatus(getLogTimeStatus.get());
 
         if (payloadCount() != 0) {
             logger.warn("Unanticipated call to psetPayload when payloadList is not empty.");

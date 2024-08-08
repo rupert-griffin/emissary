@@ -197,7 +197,7 @@ public class BaseDataObject implements Serializable, Cloneable, Remote, IBaseDat
     /***
      * Checks if the amount of time an object spends in a place should be recorded to its transform history
      */
-    private boolean logTimeStatus = false;
+    private boolean timeLoggingIsOn = false;
 
     private long timeLog = 0;
 
@@ -1516,13 +1516,13 @@ public class BaseDataObject implements Serializable, Cloneable, Remote, IBaseDat
     }
 
     @Override
-    public void setLogTimeStatus(boolean newStatus) {
-        this.logTimeStatus = newStatus;
+    public void setTimeLoggingStatus(boolean newStatus) {
+        this.timeLoggingIsOn = newStatus;
     }
 
     @Override
-    public boolean getLogTimeStatus() {
-        return this.logTimeStatus;
+    public boolean isTimeLoggingOn() {
+        return this.timeLoggingIsOn;
     }
 
     @Override
@@ -1533,7 +1533,7 @@ public class BaseDataObject implements Serializable, Cloneable, Remote, IBaseDat
 
     @Override
     public void startTimer() {
-        if (this.logTimeStatus) {
+        if (this.timeLoggingIsOn) {
             if (this.timeLog != 0 && logger.isWarnEnabled()) {
                 logger.warn("IBDO timer should be reset before it's started.");
             }
@@ -1543,7 +1543,7 @@ public class BaseDataObject implements Serializable, Cloneable, Remote, IBaseDat
 
     @Override
     public void endTimer() {
-        if (this.logTimeStatus) {
+        if (this.timeLoggingIsOn) {
             if (this.timeLog == 0 && logger.isWarnEnabled()) {
                 logger.warn("Attempting to end IBDO timer without starting it.");
             }

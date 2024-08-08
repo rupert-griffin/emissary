@@ -290,6 +290,11 @@ public class EmissaryNode {
         Sentinel.start();
     }
 
+    /**
+     * Enable agents to track time that data spends in each place
+     *
+     * @param timedMinutes length of time to track: -1 to not track, 0 to track indefinitely
+     */
     public void setupAgentTimeLogging(int timedMinutes) {
         if (timedMinutes >= 0) {
             if (this.logAgentTime) {
@@ -306,6 +311,9 @@ public class EmissaryNode {
         }
     }
 
+    /**
+     * Disable agents from tracking time that data spends in each place
+     */
     public void turnOffAgentTiming() {
         this.logAgentTime = false;
         if (this.scheduler != null) {

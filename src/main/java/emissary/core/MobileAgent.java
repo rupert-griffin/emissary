@@ -215,7 +215,7 @@ public abstract class MobileAgent implements IMobileAgent, MobileAgentMBean {
     protected synchronized void setPayload(@Nullable final IBaseDataObject p) {
         this.payload = p;
         if (p != null) {
-            p.setLogTimeStatus(MobileAgent.getLogTimeStatus.get());
+            p.setTimeLoggingStatus(MobileAgent.getLogTimeStatus.get());
         }
     }
 
@@ -281,7 +281,6 @@ public abstract class MobileAgent implements IMobileAgent, MobileAgentMBean {
             // our mission. We dont process there, just use it to call through
             // to the directory, so skip the processing. See the difference
             // between the go() and arrive() methods for details
-
             if ((loopCount > 1 || getProcessFirstPlace()) && !controlError) {
                 atPlace(currentPlace, mypayload);
             }
@@ -840,7 +839,7 @@ public abstract class MobileAgent implements IMobileAgent, MobileAgentMBean {
             }
         }
 
-        if (payloadArg.getLogTimeStatus()) {
+        if (payloadArg.isTimeLoggingOn()) {
             String time = payloadArg.getTimeLog("HH:mm:ss:SSS");
             placeKey = String.join("___", time, placeKey);
             payloadArg.resetTimer();
@@ -922,6 +921,11 @@ public abstract class MobileAgent implements IMobileAgent, MobileAgentMBean {
         this.maxItinerarySteps = value;
     }
 
+    /**
+     * Set static lambda function that determines if payload should have timing enabled
+     *
+     * @param newLogTimeFunction lambda function returning a boolean from outside the pool
+     */
     public static void setLogTimeFunction(Supplier<Boolean> newLogTimeFunction) {
         MobileAgent.getLogTimeStatus = newLogTimeFunction;
     }

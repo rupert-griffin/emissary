@@ -128,4 +128,5 @@ public interface IMobileAgent extends Serializable, Runnable {
     default int payloadCount() {
         return 1;
     }
+
 }

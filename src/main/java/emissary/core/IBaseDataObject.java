@@ -925,17 +925,43 @@ public interface IBaseDataObject {
      */
     void setTransactionId(String transactionId);
 
-    // boolean logTimeStatusIsOn();
+    /**
+     * Set whether data processing can be timed
+     *
+     * @param newStatus true to turn on time logging, false to turn off
+     */
+    void setTimeLoggingStatus(boolean newStatus);
 
-    void setLogTimeStatus(boolean newStatus);
+    /**
+     * Test if data processing can be timed
+     *
+     * @return true if time logging is on, false otherwise
+     */
+    boolean isTimeLoggingOn();
 
-    boolean getLogTimeStatus();
-
+    /**
+     * Get the time measured by the timer
+     * startTimer() and endTimer() must both be called for any meaningful output
+     *
+     * @param formatting date and time pattern string
+     *                   e.g. "yyyy.MM.dd G 'at' HH:mm:ss z", "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"
+     *
+     * @return formatted string representing the results of the timer
+     */
     String getTimeLog(String formatting);
 
+    /**
+     * Set timer to current time
+     */
     void startTimer();
 
+    /**
+     * Set timer to difference between current time and starting time
+     */
     void endTimer();
 
+    /**
+     * Set timer to 0
+     */
     void resetTimer();
 }
