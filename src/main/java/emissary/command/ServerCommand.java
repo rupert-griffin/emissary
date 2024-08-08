@@ -48,6 +48,12 @@ public class ServerCommand extends ServiceCommand {
     @Option(names = {"--strict"}, description = "If one Place fails to start, shut down the entire server\nDefault: ${DEFAULT-VALUE}")
     private boolean strictMode = false;
 
+    @Option(names = {"-t", "--timed"}, arity = "0..1", fallbackValue = "0", defaultValue = "-1",
+            description = "Time how long data spends in each place\n" +
+                    "To have in effect for entirety of run: pass `-t` or `-t 0`\n" +
+                    "To have in effect for `m` minutes: pass `-t {m}`")
+    private int timedMinutes;
+
     @Override
     public String getCommandName() {
         return COMMAND_NAME;
@@ -81,6 +87,10 @@ public class ServerCommand extends ServiceCommand {
      */
     public boolean shouldStrictMode() {
         return strictMode;
+    }
+
+    public int getTimedMinutes() {
+        return timedMinutes;
     }
 
     @Override

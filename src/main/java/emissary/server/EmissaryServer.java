@@ -104,6 +104,7 @@ public class EmissaryServer {
             System.setProperty("node.mode", cmd.getMode()); // TODO: clean this crap up
         }
         emissaryNode = node;
+        emissaryNode.setupAgentTimeLogging(cmd.getTimedMinutes());
 
         if (!emissaryNode.isValid()) {
             LOG.error("Not an emissary node, no emissary services required.");

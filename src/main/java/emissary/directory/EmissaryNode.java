@@ -24,6 +24,9 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 
 /**
@@ -85,6 +88,8 @@ public class EmissaryNode {
     protected boolean strictStartupMode = false;
 
     protected boolean logAgentTime = false;
+
+    private ScheduledExecutorService scheduler;
 
     /**
      * Construct the node. The node name and port are from system properties. The node type is based on the os.name in this
@@ -283,5 +288,28 @@ public class EmissaryNode {
 
         // The mobile agent watcher
         Sentinel.start();
+    }
+
+    public void setupAgentTimeLogging(int timedMinutes) {
+        if (timedMinutes >= 0) {
+            if (this.logAgentTime) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn("Agent timing already enabled. Please wait for it to conclude before attempting to start again.");
+                }
+                return;
+            }
+            this.logAgentTime = true;
+            if (timedMinutes > 0) {
+                this.scheduler = Executors.newScheduledThreadPool(1);
+                this.scheduler.schedule(this::turnOffAgentTiming, timedMinutes, TimeUnit.MINUTES);
+            }
+        }
+    }
+
+    public void turnOffAgentTiming() {
+        this.logAgentTime = false;
+        if (this.scheduler != null) {
+            this.scheduler.shutdown();
+        }
     }
 }
