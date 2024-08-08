@@ -940,11 +940,9 @@ public interface IBaseDataObject {
     boolean isTimeLoggingOn();
 
     /**
-     * Get the time measured by the timer
-     * startTimer() and endTimer() must both be called for any meaningful output
+     * Get the time measured by the timer. startTimer() and endTimer() must both be called for any meaningful output
      *
-     * @param formatting date and time pattern string
-     *                   e.g. "yyyy.MM.dd G 'at' HH:mm:ss z", "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"
+     * @param formatting date and time pattern string e.g. "yyyy.MM.dd G 'at' HH:mm:ss z", "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"
      *
      * @return formatted string representing the results of the timer
      */

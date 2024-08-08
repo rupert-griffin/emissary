@@ -15,6 +15,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -43,6 +44,14 @@ class MobileAgentTest extends UnitTest {
     void testHistory() {
         d.appendTransformHistory("UNKNOWN.FOO.ID.http://localhost:8005/FooPlace$1234");
         agent.recordHistory(place, d);
+    }
+
+    @Test
+    void testTimedHistory() {
+        MobileAgent.setLogTimeFunction(() -> true);
+        agent.setPayload(d);
+        d.appendTransformHistory("UNKNOWN.FOO.ID.http://localhost:8005/FooPlace$1234");
+        agent.recordTimedHistory(place, d);
     }
 
     @Test
@@ -123,6 +132,18 @@ class MobileAgentTest extends UnitTest {
             assertEquals(sz + 1, payload.transformHistory().size(), "One entry was not added to history");
             final String key = payload.getLastPlaceVisited().getFullKey();
             assertTrue(key.startsWith(payload.currentForm() + "."), "Current form is not on history element");
+        }
+
+        public void recordTimedHistory(final IServiceProviderPlace place, final IBaseDataObject payload) {
+            final String timeFormat = "^\\d{2}:\\d{2}:\\d{2}:\\d{3}___";
+            final Pattern historyPattern = Pattern.compile(timeFormat + ".+$");
+            final int sz = payload.transformHistory().size();
+            super.recordHistory(place, payload);
+            assertEquals(sz + 1, payload.transformHistory().size(), "One entry was not added to history");
+            final String key = payload.getLastPlaceVisited().getFullKey();
+            assertTrue(historyPattern.matcher(key).matches());
+            assertTrue(key.replaceAll(timeFormat, "").startsWith(payload.currentForm() + "."),
+                    "Current form is not on history element");
         }
 
         @Override

@@ -1460,4 +1460,52 @@ class BaseDataObjectTest extends UnitTest {
             assertArrayEquals(bytes2, byteArrayOutputStream.toByteArray());
         }
     }
+
+    @Test
+    void testTimerOff() throws InterruptedException {
+        final String dateFormatting = "HH:mm:ss:SSS";
+        final String zeroTime = "00:00:00:000";
+        final IBaseDataObject ibdo = new BaseDataObject();
+
+        assertFalse(ibdo.isTimeLoggingOn());
+
+        assertEquals(zeroTime, ibdo.getTimeLog(dateFormatting));
+
+        ibdo.startTimer();
+        assertEquals(zeroTime, ibdo.getTimeLog(dateFormatting));
+
+        Thread.sleep(500); // Wait half a second
+
+        ibdo.endTimer();
+        assertEquals(zeroTime, ibdo.getTimeLog(dateFormatting));
+
+        ibdo.resetTimer();
+        assertEquals(zeroTime, ibdo.getTimeLog(dateFormatting));
+    }
+
+    @Test
+    void testTimerOn() throws InterruptedException {
+        final String dateFormatting = "HH:mm:ss:SSS";
+        final String zeroTime = "00:00:00:000";
+        final IBaseDataObject ibdo = new BaseDataObject();
+
+        ibdo.setTimeLoggingStatus(true);
+        assertTrue(ibdo.isTimeLoggingOn());
+
+        assertEquals(zeroTime, ibdo.getTimeLog(dateFormatting));
+
+        ibdo.startTimer();
+        final String startingTime = ibdo.getTimeLog(dateFormatting);
+        assertNotEquals(zeroTime, startingTime);
+
+        Thread.sleep(500); // Wait half a second
+
+        ibdo.endTimer();
+        final String endingTime = ibdo.getTimeLog(dateFormatting);
+        assertNotEquals(zeroTime, endingTime);
+        assertNotEquals(startingTime, endingTime);
+
+        ibdo.resetTimer();
+        assertEquals(zeroTime, ibdo.getTimeLog(dateFormatting));
+    }
 }
