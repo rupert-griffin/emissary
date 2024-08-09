@@ -290,25 +290,26 @@ public class EmissaryNode {
         Sentinel.start();
     }
 
-    /**
+    /***
      * Enable agents to track time that data spends in each place
      *
      * @param timedMinutes length of time to track: -1 to not track, 0 to track indefinitely
+     *
+     * @return true if operation successfully turns on time logging, false otherwise
      */
-    public void setupAgentTimeLogging(int timedMinutes) {
+    public boolean setupAgentTimeLogging(int timedMinutes) {
         if (timedMinutes >= 0) {
             if (this.logAgentTime) {
-                if (logger.isWarnEnabled()) {
-                    logger.warn("Agent timing already enabled. Please wait for it to conclude before attempting to start again.");
-                }
-                return;
+               return false;
             }
             this.logAgentTime = true;
             if (timedMinutes > 0) {
                 this.scheduler = Executors.newScheduledThreadPool(1);
                 this.scheduler.schedule(this::turnOffAgentTiming, timedMinutes, TimeUnit.MINUTES);
             }
+            return true;
         }
+        return false;
     }
 
     /**
