@@ -42,6 +42,10 @@ public class TimeLogging {
     }
 
     private Response enable(int minutes) {
+        if (minutes < 0) {
+            return Response.ok(String.format("Cannot enable agent timing for %d minutes.\n", minutes) +
+                    "Please use an integer greater than 0 for a time limit, or use 0 to enable indefinitely.").build();
+        }
         try {
             EmissaryServer emissaryServer = (EmissaryServer) Namespace.lookup("EmissaryServer");
             EmissaryNode localNode = emissaryServer.getNode();
