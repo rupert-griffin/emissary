@@ -52,18 +52,19 @@ public final class RetryPolicy {
         this.isUnlimited = configG.findBooleanEntry(GRPC_RETRY_UNLIMITED, Defaults.UNLIMITED);
         this.numFailsBeforeWarn = configG.findIntEntry(GRPC_RETRY_NUM_FAILS_BEFORE_WARN, Defaults.NUM_FAILS_BEFORE_WARN);
 
-        int retryInitialWaitMs = configG.findIntEntry(GRPC_RETRY_INITIAL_WAIT_MS, Defaults.INITIAL_WAIT);
-        int retryMultiplier = configG.findIntEntry(GRPC_RETRY_MULTIPLIER, Defaults.MULTIPLIER);
-        final RetryConfig retryConfig = RetryConfig.custom()
+        RetryRegistry registry = RetryRegistry.of(RetryConfig.custom()
                 .maxAttempts(maxAttempts)
-                .intervalFunction(IntervalFunction.ofExponentialBackoff(retryInitialWaitMs, retryMultiplier))
+                .intervalFunction(IntervalFunction.ofExponentialBackoff(
+                        configG.findIntEntry(GRPC_RETRY_INITIAL_WAIT_MS, Defaults.INITIAL_WAIT),
+                        configG.findIntEntry(GRPC_RETRY_MULTIPLIER, Defaults.MULTIPLIER)))
                 .retryExceptions(ServiceNotAvailableException.class)
-                .build();
+                .build());
 
-        RetryRegistry registry = RetryRegistry.of(retryConfig);
         if (logger.isDebugEnabled()) {
-            registry.getEventPublisher().onEntryAdded(entryAddedEvent -> entryAddedEvent.getAddedEntry().getEventPublisher()
-                    .onRetry(event -> logger.debug("Retrying connection with event error: {}", event)));
+            registry.getEventPublisher().onEntryAdded(entryAddedEvent -> entryAddedEvent
+                    .getAddedEntry()
+                    .getEventPublisher()
+                    .onRetry(retryEvent -> logger.debug("Retrying connection with event error: {}", retryEvent)));
         }
 
         this.retry = registry.retry(retryRegistryName);

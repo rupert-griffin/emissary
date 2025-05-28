@@ -1,6 +1,7 @@
 package emissary.place;
 
 import emissary.config.Configurator;
+import emissary.util.grpc.exceptions.GrpcPoolException;
 import emissary.util.grpc.exceptions.ServiceException;
 import emissary.util.grpc.exceptions.ServiceNotAvailableException;
 import emissary.util.grpc.pool.ConnectionFactory;
@@ -153,7 +154,7 @@ public abstract class GrpcConnectionPlace extends ServiceProviderPlace implement
         while (retryExecutor.canContinue()) {
             try {
                 return retryExecutor.execute();
-            } catch (ServiceNotAvailableException e) {
+            } catch (GrpcPoolException | ServiceNotAvailableException e) {
                 logger.atLevel(retryExecutor.getLogLevel()).log("Failed gRPC connection attempt #{} from {}",
                         retryExecutor.getAttemptNumber(), this.getPlaceName());
             }
