@@ -88,6 +88,11 @@ public abstract class GrpcConnectionPlace extends ServiceProviderPlace implement
             public boolean validateObject(PooledObject<ManagedChannel> pooledObject) {
                 return validateConnection(pooledObject.getObject());
             }
+
+            @Override
+            public void passivateObject(PooledObject<ManagedChannel> pooledObject) {
+                passivateConnection(pooledObject.getObject());
+            }
         };
         channelPool = connectionFactory.newConnectionPool();
         retryPolicy = new RetryPolicy(configG, this.getPlaceName());
@@ -101,6 +106,14 @@ public abstract class GrpcConnectionPlace extends ServiceProviderPlace implement
      * @return {@code true} if the channel is healthy and the server responds successfully, else {@code false}
      */
     protected abstract boolean validateConnection(ManagedChannel managedChannel);
+
+    /**
+     * Called after a gRPC call to clean up the channel. No-op by default, since gRPC channels are designed to
+     * remain ready for reuse. Override this if using a stub that needs to be reset or cleared between uses.
+     *
+     * @param managedChannel the gRPC channel to clean up
+     */
+    protected void passivateConnection(ManagedChannel managedChannel) { /* No-op */ }
 
     /**
      * Executes a unary gRPC call using a {@code BlockingStub}.
