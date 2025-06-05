@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public abstract class GrpcConnectionPlace extends ServiceProviderPlace implements IGrpcConnectionPlace {
     private static final String GRPC_HOST = "GRPC_HOST";
@@ -108,8 +109,8 @@ public abstract class GrpcConnectionPlace extends ServiceProviderPlace implement
     protected abstract boolean validateConnection(ManagedChannel managedChannel);
 
     /**
-     * Called after a gRPC call to clean up the channel. No-op by default, since gRPC channels are designed to
-     * remain ready for reuse. Override this if using a stub that needs to be reset or cleared between uses.
+     * Called after a gRPC call to clean up the channel. No-op by default, since gRPC channels are designed to remain ready
+     * for reuse. Override this if using a stub that needs to be reset or cleared between uses.
      *
      * @param managedChannel the gRPC channel to clean up
      */
@@ -162,7 +163,8 @@ public abstract class GrpcConnectionPlace extends ServiceProviderPlace implement
             Function<ManagedChannel, StubT> stubFactory,
             BiFunction<StubT, ReqT, RespT> callLogic, ReqT payload) {
 
-        RetryExecutor<RespT> retryExecutor = new RetryExecutor<>(() -> invokeGrpc(stubFactory, callLogic, payload), retryPolicy);
+        Supplier<RespT> invoker = () -> invokeGrpc(stubFactory, callLogic, payload);
+        RetryExecutor<RespT> retryExecutor = new RetryExecutor<>(invoker, retryPolicy);
         while (retryExecutor.canContinue()) {
             try {
                 return retryExecutor.execute();

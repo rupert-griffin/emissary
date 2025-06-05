@@ -51,7 +51,7 @@ class ConnectionFactoryTest extends UnitTest {
         }
     }
 
-    private Configurator getDefaultConfigs() {
+    private static Configurator getDefaultConfigs() {
         Configurator configT = new ServiceConfigGuide();
         configT.addEntry(GRPC_POOL_MIN_IDLE_CONNECTIONS, "1");
         configT.addEntry(GRPC_POOL_MAX_IDLE_CONNECTIONS, "2");

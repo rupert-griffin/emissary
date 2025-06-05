@@ -9,8 +9,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -35,12 +33,7 @@ class RetryExecutorTest extends UnitTest {
 
     @Test
     void testRetryExecutorSuccess() {
-        AtomicInteger callCount = new AtomicInteger();
-
-        RetryExecutor<String> executor = new RetryExecutor<>(() -> {
-            callCount.incrementAndGet();
-            return "Success";
-        }, retryPolicy);
+        RetryExecutor<String> executor = new RetryExecutor<>(() -> "Success", retryPolicy);
 
         assertEquals("Success", executor.execute());
         assertEquals(1, executor.getAttemptNumber());
@@ -49,18 +42,14 @@ class RetryExecutorTest extends UnitTest {
 
     @Test
     void testRetryExecutorMaxAttempts() {
-        AtomicInteger callCount = new AtomicInteger();
-
         RetryExecutor<String> executor = new RetryExecutor<>(() -> {
-            callCount.incrementAndGet();
             throw new ServiceNotAvailableException("Fail");
         }, retryPolicy);
 
         while (executor.canContinue()) {
             try {
                 executor.execute();
-            } catch (ServiceNotAvailableException ignored) {
-            }
+            } catch (ServiceNotAvailableException ignored) {}
 
             if (executor.getAttemptNumber() > DEFAULT_RETRY_MAX_ATTEMPTS) {
                 fail("Went over max attempt limit");
