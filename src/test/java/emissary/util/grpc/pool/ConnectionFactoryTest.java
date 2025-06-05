@@ -25,6 +25,9 @@ class ConnectionFactoryTest extends UnitTest {
     private static final String GRPC_POOL_MIN_IDLE_CONNECTIONS = "GRPC_POOL_MIN_IDLE_CONNECTIONS";
     private static final String GRPC_POOL_MAX_IDLE_CONNECTIONS = "GRPC_POOL_MAX_IDLE_CONNECTIONS";
     private static final String GRPC_POOL_MAX_SIZE = "GRPC_POOL_MAX_SIZE";
+    private static final String GRPC_POOL_RETRIEVAL_ORDER = "GRPC_POOL_RETRIEVAL_ORDER";
+    private static final String GRPC_LOAD_BALANCING_POLICY = "GRPC_LOAD_BALANCING_POLICY";
+
     private static final String HOST = "localhost";
     private static final int PORT = 2222;
 
@@ -48,16 +51,36 @@ class ConnectionFactoryTest extends UnitTest {
         }
     }
 
-    @Override
-    @BeforeEach
-    public void setUp() throws Exception {
+    private Configurator getDefaultConfigs() {
         Configurator configT = new ServiceConfigGuide();
         configT.addEntry(GRPC_POOL_MIN_IDLE_CONNECTIONS, "1");
         configT.addEntry(GRPC_POOL_MAX_IDLE_CONNECTIONS, "2");
         configT.addEntry(GRPC_POOL_MAX_SIZE, "2");
+        return configT;
+    }
 
+    @Override
+    @BeforeEach
+    public void setUp() throws Exception {
+        Configurator configT = getDefaultConfigs();
         factory = new TestConnectionFactory(HOST, PORT, configT);
         pool = factory.newConnectionPool();
+    }
+
+    @Test
+    void testBadPoolRetrievalOrderConfigs() {
+        Configurator configT = getDefaultConfigs();
+        configT.addEntry(GRPC_POOL_RETRIEVAL_ORDER, "ZIFO");
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> new TestConnectionFactory(HOST, PORT, configT));
+        assertEquals("No enum constant emissary.util.grpc.pool.PoolRetrievalOrdering.ZIFO", e.getMessage());
+    }
+
+    @Test
+    void testBadLoadBalancingConfigs() {
+        Configurator configT = getDefaultConfigs();
+        configT.addEntry(GRPC_LOAD_BALANCING_POLICY, "bad_scheduler");
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> new TestConnectionFactory(HOST, PORT, configT));
+        assertEquals("No enum constant emissary.util.grpc.pool.LoadBalancingPolicy.BAD_SCHEDULER", e.getMessage());
     }
 
     @Test

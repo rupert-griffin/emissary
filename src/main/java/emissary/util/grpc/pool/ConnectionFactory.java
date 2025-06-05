@@ -73,17 +73,6 @@ public abstract class ConnectionFactory extends BasePooledObjectFactory<ManagedC
     private final String loadBalancingPolicy;
     private final float erodingPoolFactor;
 
-    private enum PoolOrdering {
-        LIFO, FIFO;
-
-        public static boolean getLifoFlag(String order, boolean defaultValue) {
-            if (order != null) {
-                return PoolOrdering.valueOf(order) == LIFO;
-            }
-            return defaultValue;
-        }
-    }
-
     /**
      * Constructs a new gRPC connection factory using the provided host, port, and configuration. Initializes pool settings
      * and gRPC channel properties from the given configuration source.
@@ -112,9 +101,9 @@ public abstract class ConnectionFactory extends BasePooledObjectFactory<ManagedC
         this.maxInboundMetadataSize = configG.findIntEntry(GRPC_MAX_INBOUND_METADATA_BYTE_SIZE, ConnectionDefaults.MAX_METADATA_SIZE);
 
         // Specifies how the client chooses between multiple backend addresses
-        // e.g. "pick_first" uses the first address only, while "round_robin" cycles through all of them for client-side
-        // balancing
-        this.loadBalancingPolicy = configG.findStringEntry(GRPC_LOAD_BALANCING_POLICY, ConnectionDefaults.LOAD_BALANCING_POLICY);
+        // e.g. "pick_first" uses the first address only, "round_robin" cycles through all of them for client-side balancing
+        this.loadBalancingPolicy = LoadBalancingPolicy.resolvePolicy(
+                configG.findStringEntry(GRPC_LOAD_BALANCING_POLICY), LoadBalancingPolicy.ROUND_ROBIN);
 
         // Controls how aggressively idle connections are phased out over time
         // Set to a float between 0.0 and 1.0 to enable erosion (e.g. 0.2 = mild erosion)
@@ -129,7 +118,7 @@ public abstract class ConnectionFactory extends BasePooledObjectFactory<ManagedC
         this.poolConfig.setMaxTotal(configG.findIntEntry(GRPC_POOL_MAX_SIZE, ConnectionDefaults.MAX_SIZE));
 
         // Order for pool to borrow connections
-        this.poolConfig.setLifo(PoolOrdering.getLifoFlag(
+        this.poolConfig.setLifo(PoolRetrievalOrdering.getLifoFlag(
                 configG.findStringEntry(GRPC_POOL_RETRIEVAL_ORDER), BaseObjectPoolConfig.DEFAULT_LIFO));
 
         // Enable thread blocking when borrowing from exhausted pool

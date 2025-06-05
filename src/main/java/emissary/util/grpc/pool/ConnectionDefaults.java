@@ -10,7 +10,6 @@ final class ConnectionDefaults {
     static final boolean KEEP_ALIVE_WITHOUT_CALLS = false;
     static final int MAX_MESSAGE_SIZE = 1 << 22; // grpc-java default: 4 MiB (2^22)
     static final int MAX_METADATA_SIZE = 1 << 13; // grpc-java default: 8 KiB (2^13)
-    static final String LOAD_BALANCING_POLICY = "round_robin";
     static final float ERODING_FACTOR = -1.0f; // disables automatic pool shrinking
     static final int MIN_IDLE_CONNECTIONS = 0;
     static final int MAX_IDLE_CONNECTIONS = 8;

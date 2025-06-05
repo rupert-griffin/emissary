@@ -131,20 +131,19 @@ public abstract class GrpcConnectionPlace extends ServiceProviderPlace implement
             BiFunction<StubT, ReqT, RespT> callLogic, ReqT payload) {
 
         ManagedChannel channel = ConnectionFactory.acquireChannel(channelPool);
+        RespT response = null;
         try {
             StubT stub = stubFactory.apply(channel);
-            return callLogic.apply(stub, payload);
+            response = callLogic.apply(stub, payload);
+            ConnectionFactory.returnChannel(channel, channelPool);
         } catch (StatusRuntimeException e) {
             ConnectionFactory.returnChannel(channel, channelPool);
             ServiceException.handleGrpcStatusRuntimeException(e);
         } catch (RuntimeException e) {
             logger.error("Encountered error while processing data in {}", this.getPlaceName(), e);
             ConnectionFactory.invalidateChannel(channel, channelPool);
-            channel = null;
-        } finally {
-            ConnectionFactory.returnChannel(channel, channelPool);
         }
-        return null;
+        return response;
     }
 
     /**
