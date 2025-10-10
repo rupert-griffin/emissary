@@ -92,6 +92,16 @@ public class ConfiguredPlaceFactory<T extends IServiceProviderPlace> {
         }
     }
 
+    public <E extends Exception> E getBuildPlaceException(Class<E> exceptionType, ConfigEntry... optionalConfigs) {
+        try {
+            Configurator classConfigs = newInstanceConfigurator(optionalConfigs);
+            placeConstructor.newInstance(classConfigs);
+        } catch (Exception e) {
+            return exceptionType.cast(e.getCause());
+        }
+        throw new IllegalStateException(String.format("Succeeded building %s but expected failure", placeName));
+    }
+
     private Configurator newInstanceConfigurator(ConfigEntry... optionalConfigs) {
         if (optionalConfigs.length == 0) {
             return defaultConfigurator;
