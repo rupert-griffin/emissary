@@ -92,6 +92,26 @@ public class ConfiguredPlaceFactory<T extends IServiceProviderPlace> {
         }
     }
 
+    /**
+     * Returns the Exception that would be thrown if the place is built with the given configurations. Actually throws
+     * an Exception if the build doesn't throw anything.
+     *
+     * @param optionalConfigs list of new or overriding place configurations
+     * @return an Exception object
+     */
+    public Exception getBuildPlaceException(ConfigEntry... optionalConfigs) {
+        return getBuildPlaceException(Exception.class, optionalConfigs);
+    }
+
+    /**
+     * Returns the Exception that would be thrown if the place is built with the given configurations. Actually throws
+     * an Exception if the provided type doesn't match, or if the build doesn't throw anything.
+     *
+     * @param exceptionType Exception base class
+     * @param optionalConfigs list of new or overriding place configurations
+     * @return an Exception object
+     * @param <E> The Exception type that is expected to be thrown
+     */
     public <E extends Exception> E getBuildPlaceException(Class<E> exceptionType, ConfigEntry... optionalConfigs) {
         try {
             Configurator classConfigs = newInstanceConfigurator(optionalConfigs);

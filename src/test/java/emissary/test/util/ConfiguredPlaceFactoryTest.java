@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -212,6 +213,15 @@ class ConfiguredPlaceFactoryTest extends UnitTest {
 
     @Test
     void testExpectedExceptionForBuildFailure() {
+        ConfiguredPlaceFactory<StartupFailurePlace> factory = new ConfiguredPlaceFactory<>(StartupFailurePlace.class);
+        Exception e = factory.getBuildPlaceException();
+
+        assertInstanceOf(StartupFailurePlace.SomeException.class, e);
+        assertEquals("Some Exception message from Place instantiation", e.getMessage());
+    }
+
+    @Test
+    void testExpectedExceptionForBuildFailureWithProvidedType() {
         ConfiguredPlaceFactory<StartupFailurePlace> factory = new ConfiguredPlaceFactory<>(StartupFailurePlace.class);
         StartupFailurePlace.SomeException e = factory.getBuildPlaceException(StartupFailurePlace.SomeException.class);
 
