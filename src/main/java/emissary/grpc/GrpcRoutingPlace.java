@@ -1,10 +1,11 @@
 package emissary.grpc;
 
 import emissary.config.Configurator;
+import emissary.grpc.channel.ChannelManager;
+import emissary.grpc.channel.PooledChannelManager;
 import emissary.grpc.exceptions.PoolException;
 import emissary.grpc.exceptions.ServiceException;
 import emissary.grpc.exceptions.ServiceNotAvailableException;
-import emissary.grpc.pool.ConnectionFactory;
 import emissary.grpc.retry.RetryHandler;
 import emissary.place.ServiceProviderPlace;
 
@@ -14,9 +15,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.AbstractBlockingStub;
 import io.grpc.stub.AbstractFutureStub;
-import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import org.apache.commons.pool2.ObjectPool;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,7 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -39,7 +37,7 @@ import java.util.stream.Collectors;
  * identifier for the given host:port</li>
  * <li>{@code GRPC_PORT_{Target-ID}} - gRPC service port, where {@code Target-ID} is the unique identifier for the given
  * host:port</li>
- * <li>See {@link ConnectionFactory} for supported pooling and gRPC channel configuration keys and defaults.</li>
+ * <li>See {@link ChannelManager} for supported gRPC channel configuration keys and defaults.</li>
  * <li>See {@link RetryHandler} for supported retry configuration keys and defaults.</li>
  * </ul>
  */
@@ -50,7 +48,7 @@ public abstract class GrpcRoutingPlace extends ServiceProviderPlace implements I
     protected RetryHandler retryHandler;
     protected final Map<String, String> hostnameTable = new HashMap<>();
     protected final Map<String, Integer> portNumberTable = new HashMap<>();
-    protected final Map<String, ObjectPool<ManagedChannel>> channelPoolTable = new HashMap<>();
+    protected final Map<String, ChannelManager> channelManagerTable = new HashMap<>();
 
     protected GrpcRoutingPlace() throws IOException {
         super();
@@ -118,24 +116,10 @@ public abstract class GrpcRoutingPlace extends ServiceProviderPlace implements I
                     "Missing required arguments: %s${Target-ID} and %s${Target-ID}", GRPC_HOST, GRPC_PORT));
         }
 
-        Set<String> targetIds = hostnameTable.keySet();
-        for (String id : targetIds) {
-            channelPoolTable.put(id, newConnectionPool(id));
-        }
+        hostnameTable.forEach((id, host) -> channelManagerTable.put(id, new PooledChannelManager(
+                host, portNumberTable.get(id), configG, this::validateConnection)));
 
         retryHandler = new RetryHandler(configG, this.getPlaceName());
-    }
-
-    private ObjectPool<ManagedChannel> newConnectionPool(String id) {
-        return newConnectionFactory(id).newConnectionPool();
-    }
-
-    private ConnectionFactory newConnectionFactory(String id) {
-        return newConnectionFactory(hostnameTable.get(id), portNumberTable.get(id), Objects.requireNonNull(configG));
-    }
-
-    private ConnectionFactory newConnectionFactory(String host, int port, @Nonnull Configurator cfg) {
-        return new ConnectionFactory(host, port, cfg, this::validateConnection, this::passivateConnection);
     }
 
     /**
@@ -146,14 +130,6 @@ public abstract class GrpcRoutingPlace extends ServiceProviderPlace implements I
      * @return {@code true} if the channel is healthy and the server responds successfully, else {@code false}
      */
     protected abstract boolean validateConnection(ManagedChannel managedChannel);
-
-    /**
-     * Called after a gRPC call to clean up the channel. No-op by default, since gRPC channels are designed to remain ready
-     * for reuse. Override this if using a stub that requires channels be reset or cleared between uses.
-     *
-     * @param managedChannel the gRPC channel to clean up
-     */
-    protected void passivateConnection(ManagedChannel managedChannel) { /* No-op */ }
 
     /**
      * Executes a unary gRPC call to a given endpoint using a {@code BlockingStub}. If the gRPC connection fails due to a
@@ -174,18 +150,18 @@ public abstract class GrpcRoutingPlace extends ServiceProviderPlace implements I
             String targetId, Function<ManagedChannel, S> stubFactory, BiFunction<S, Q, R> callLogic, Q request) {
 
         return retryHandler.execute(() -> {
-            ObjectPool<ManagedChannel> channelPool = channelPoolLookup(targetId);
-            ManagedChannel channel = ConnectionFactory.acquireChannel(channelPool);
+            ChannelManager channelManager = getChannelManager(targetId);
+            ManagedChannel channel = channelManager.acquire();
             R response = null;
             try {
                 S stub = stubFactory.apply(channel);
                 response = callLogic.apply(stub, request);
-                ConnectionFactory.returnChannel(channel, channelPool);
+                channelManager.release(channel);
             } catch (StatusRuntimeException e) {
-                ConnectionFactory.invalidateChannel(channel, channelPool);
+                channelManager.shutdown(channel);
                 ServiceException.handleGrpcStatusRuntimeException(e);
             } catch (RuntimeException e) {
-                ConnectionFactory.invalidateChannel(channel, channelPool);
+                channelManager.shutdown(channel);
                 throw e;
             }
             return response;
@@ -214,8 +190,8 @@ public abstract class GrpcRoutingPlace extends ServiceProviderPlace implements I
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
-    private ObjectPool<ManagedChannel> channelPoolLookup(String targetId) {
-        return tableLookup(channelPoolTable, targetId);
+    private ChannelManager getChannelManager(String targetId) {
+        return tableLookup(channelManagerTable, targetId);
     }
 
     public String getHostname(String targetId) {
@@ -231,5 +207,11 @@ public abstract class GrpcRoutingPlace extends ServiceProviderPlace implements I
             return table.get(targetId);
         }
         throw new IllegalArgumentException(String.format("Target-ID %s was never configured", targetId));
+    }
+
+    @Override
+    public void shutDown() {
+        channelManagerTable.values().forEach(ChannelManager::close);
+        super.shutDown();
     }
 }

@@ -3,7 +3,6 @@ package emissary.grpc.sample;
 import emissary.config.Configurator;
 import emissary.core.IBaseDataObject;
 import emissary.grpc.GrpcRoutingPlace;
-import emissary.grpc.pool.ConnectionFactory;
 import emissary.grpc.retry.RetryHandler;
 import emissary.grpc.sample.v1.SampleRequest;
 import emissary.grpc.sample.v1.SampleResponse;
@@ -30,16 +29,13 @@ public class GrpcSampleServicePlace extends GrpcRoutingPlace {
     public static final String SERVICE_PROXY = "SAMPLE_FORM";
     public static final String ALTERNATE_VIEW_NAME = "SAMPLE_ALTERNATE_VIEW";
     private static final Pattern FORM_PATTERN = Pattern.compile(SERVICE_PROXY + "-(\\w+)");
-    public static final String GRPC_POOL_KILL_AFTER_RETURN = "GRPC_POOL_KILL_AFTER_RETURN";
 
     @Nullable
     private AtomicBoolean connectionValidated;
-    private final boolean passivateConnection;
 
     public GrpcSampleServicePlace(Configurator configs) throws IOException {
         super(configs);
         connectionValidated = null;
-        passivateConnection = configs.findBooleanEntry(GRPC_POOL_KILL_AFTER_RETURN, false);
     }
 
     @Override
@@ -117,36 +113,24 @@ public class GrpcSampleServicePlace extends GrpcRoutingPlace {
     }
 
     /**
-     * Shuts down a channel after it's been returned to the pool, if the place has been configured to do so.
-     *
-     * @param managedChannel the gRPC channel to clean up
-     */
-    @Override
-    protected void passivateConnection(ManagedChannel managedChannel) {
-        if (passivateConnection) {
-            managedChannel.shutdownNow();
-        }
-    }
-
-    /**
      * Borrows a channel from the connection pool. Used for testing
-     * {@link GrpcRoutingPlace#validateConnection(ManagedChannel) validateConnection} and
-     * {@link GrpcRoutingPlace#passivateConnection(ManagedChannel) passivateConnection}.
+     * {@link GrpcRoutingPlace#validateConnection(ManagedChannel) validateConnection}.
+     *
      *
      * @return a channel from the pool
      */
     public ManagedChannel acquireChannel(String targetId) {
-        return ConnectionFactory.acquireChannel(channelPoolTable.get(targetId));
+        return channelManagerTable.get(targetId).acquire();
     }
 
     /**
      * Returns a channel to the connection pool. Used for testing {@link GrpcRoutingPlace#validateConnection(ManagedChannel)
-     * validateConnection} and {@link GrpcRoutingPlace#passivateConnection(ManagedChannel) passivateConnection}.
+     * validateConnection}.
      *
      * @param channel the channel to return
      */
     public void returnChannel(ManagedChannel channel, String targetId) {
-        ConnectionFactory.returnChannel(channel, channelPoolTable.get(targetId));
+        channelManagerTable.get(targetId).release(channel);
     }
 
     public void setValidationCheck(AtomicBoolean connectionValidated) {

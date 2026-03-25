@@ -4,9 +4,9 @@ import emissary.config.ConfigEntry;
 import emissary.core.BaseDataObject;
 import emissary.core.IBaseDataObject;
 import emissary.grpc.GrpcRoutingPlace;
+import emissary.grpc.channel.PooledChannelManager;
 import emissary.grpc.exceptions.ServiceException;
 import emissary.grpc.exceptions.ServiceNotAvailableException;
-import emissary.grpc.pool.ConnectionFactory;
 import emissary.grpc.retry.RetryHandler;
 import emissary.test.core.junit5.UnitTest;
 import emissary.test.util.ConfiguredPlaceFactory;
@@ -106,8 +106,7 @@ class GrpcSampleServicePlaceTest extends UnitTest {
     @Nested
     class ManagedChannelHandlingTests extends UnitTest {
         private static final String TARGET_ID = ENDPOINT_1_ID;
-        private static final String VALIDATION_PARAM = ConnectionFactory.GRPC_POOL_TEST_BEFORE_BORROW;
-        private static final String PASSIVATION_PARAM = GrpcSampleServicePlace.GRPC_POOL_KILL_AFTER_RETURN;
+        private static final String VALIDATION_PARAM = PooledChannelManager.GRPC_POOL_TEST_BEFORE_BORROW;
         private AtomicBoolean connectionValidated;
 
         @BeforeEach
@@ -133,24 +132,6 @@ class GrpcSampleServicePlaceTest extends UnitTest {
             ManagedChannel channel = samplePlace.acquireChannel(TARGET_ID);
             assertTrue(connectionValidated.get());
             samplePlace.returnChannel(channel, TARGET_ID);
-        }
-
-        @Test
-        void testConnectionIsNotPassivated() {
-            samplePlace = placeFactory.buildPlace(new ConfigEntry(PASSIVATION_PARAM, Boolean.FALSE.toString()));
-            ManagedChannel channel = samplePlace.acquireChannel(TARGET_ID);
-            assertFalse(channel.isShutdown());
-            samplePlace.returnChannel(channel, TARGET_ID);
-            assertFalse(channel.isShutdown());
-        }
-
-        @Test
-        void testConnectionIsPassivated() {
-            samplePlace = placeFactory.buildPlace(new ConfigEntry(PASSIVATION_PARAM, Boolean.TRUE.toString()));
-            ManagedChannel channel = samplePlace.acquireChannel(TARGET_ID);
-            assertFalse(channel.isShutdown());
-            samplePlace.returnChannel(channel, TARGET_ID);
-            assertTrue(channel.isShutdown());
         }
     }
 
