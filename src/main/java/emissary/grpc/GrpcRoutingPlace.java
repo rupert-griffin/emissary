@@ -10,6 +10,8 @@ import emissary.place.ServiceProviderPlace;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.GeneratedMessageV3;
 import io.grpc.ManagedChannel;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.AbstractBlockingStub;
 import io.grpc.stub.AbstractFutureStub;
 import jakarta.annotation.Nonnull;
@@ -42,6 +44,11 @@ import java.util.stream.Collectors;
  * </ul>
  */
 public abstract class GrpcRoutingPlace extends ServiceProviderPlace implements IGrpcRoutingPlace {
+    public static final Set<Status.Code> RETRY_GRPC_CODES = Set.of(
+            Status.Code.UNAVAILABLE,
+            Status.Code.DEADLINE_EXCEEDED,
+            Status.Code.RESOURCE_EXHAUSTED);
+
     public static final String GRPC_HOST = "GRPC_HOST_";
     public static final String GRPC_PORT = "GRPC_PORT_";
 
@@ -101,6 +108,13 @@ public abstract class GrpcRoutingPlace extends ServiceProviderPlace implements I
                 .collect(Collectors.toMap(Map.Entry::getKey, entry -> Integer.parseInt(entry.getValue())));
     }
 
+    protected boolean retryOnException(Throwable t) {
+        if (t instanceof StatusRuntimeException) {
+            return RETRY_GRPC_CODES.contains(((StatusRuntimeException) t).getStatus().getCode());
+        }
+        return false;
+    }
+
     private void configureGrpc() {
         if (configG == null) {
             throw new IllegalStateException("gRPC configurations not found for " + this.getPlaceName());
@@ -123,7 +137,7 @@ public abstract class GrpcRoutingPlace extends ServiceProviderPlace implements I
             channelPoolTable.put(id, newConnectionPool(id));
         }
 
-        RetryHandler retryHandler = new RetryHandler(configG, this.getPlaceName());
+        RetryHandler retryHandler = new RetryHandler(configG, this.getPlaceName(), this::retryOnException);
         blockingInvoker = new BlockingInvoker(retryHandler, logger);
         asyncInvoker = new AsyncInvoker(retryHandler, logger);
     }
