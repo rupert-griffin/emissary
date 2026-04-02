@@ -4,6 +4,7 @@ import emissary.config.Configurator;
 import emissary.grpc.invoker.AsyncInvoker;
 import emissary.grpc.invoker.BlockingInvoker;
 import emissary.grpc.pool.ConnectionFactory;
+import emissary.grpc.pool.PoolException;
 import emissary.grpc.retry.RetryHandler;
 import emissary.place.ServiceProviderPlace;
 
@@ -110,9 +111,10 @@ public abstract class GrpcRoutingPlace extends ServiceProviderPlace implements I
 
     protected boolean retryOnException(Throwable t) {
         if (t instanceof StatusRuntimeException) {
-            return RETRY_GRPC_CODES.contains(((StatusRuntimeException) t).getStatus().getCode());
+            StatusRuntimeException e = (StatusRuntimeException) t;
+            return RETRY_GRPC_CODES.contains(e.getStatus().getCode());
         }
-        return false;
+        return t instanceof PoolException;
     }
 
     private void configureGrpc() {

@@ -1,14 +1,10 @@
 package emissary.grpc.invoker;
 
-import emissary.grpc.exceptions.PoolException;
-import emissary.grpc.exceptions.ServiceException;
-import emissary.grpc.exceptions.ServiceNotAvailableException;
 import emissary.grpc.pool.ConnectionFactory;
 import emissary.grpc.retry.RetryHandler;
 
 import com.google.protobuf.GeneratedMessageV3;
 import io.grpc.ManagedChannel;
-import io.grpc.StatusRuntimeException;
 import io.grpc.stub.AbstractBlockingStub;
 import org.apache.commons.pool2.ObjectPool;
 import org.slf4j.Logger;
@@ -23,9 +19,8 @@ public class BlockingInvoker extends BaseInvoker {
 
     /**
      * Executes a unary gRPC call to a given endpoint using an {@link AbstractBlockingStub}. If the gRPC connection fails
-     * due to a {@link PoolException} or a {@link ServiceNotAvailableException}, the call will be tried again per the
-     * configurations set using {@link RetryHandler}. All other Exceptions are thrown on the spot. Will also throw an
-     * Exception once max attempts have been reached.
+     * due to an allowed Exception, the call will be tried again per the configurations set using {@link RetryHandler}. All
+     * other Exceptions are thrown on the spot. Will also throw an Exception once max attempts have been reached.
      *
      * @param channelPool object pool of gRPC connections for a given endpoint
      * @param stubFactory function that creates the appropriate gRPC stub from a {@link ManagedChannel}
@@ -43,19 +38,15 @@ public class BlockingInvoker extends BaseInvoker {
             Q request) {
         return retryHandler.execute(() -> {
             ManagedChannel channel = ConnectionFactory.acquireChannel(channelPool);
-            R response = null;
             try {
                 S stub = stubFactory.apply(channel);
-                response = callLogic.apply(stub, request);
+                R response = callLogic.apply(stub, request);
                 ConnectionFactory.returnChannel(channel, channelPool);
-            } catch (StatusRuntimeException e) {
-                ConnectionFactory.invalidateChannel(channel, channelPool);
-                ServiceException.handleGrpcStatusRuntimeException(e);
+                return response;
             } catch (RuntimeException e) {
                 ConnectionFactory.invalidateChannel(channel, channelPool);
                 throw e;
             }
-            return response;
         });
     }
 }
