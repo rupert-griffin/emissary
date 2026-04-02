@@ -32,10 +32,8 @@ public class BlockingInvoker extends BaseInvoker {
      * @param <S> the gRPC stub type
      */
     public <Q extends GeneratedMessageV3, R extends GeneratedMessageV3, S extends AbstractBlockingStub<S>> R invoke(
-            ObjectPool<ManagedChannel> channelPool,
-            Function<ManagedChannel, S> stubFactory,
-            BiFunction<S, Q, R> callLogic,
-            Q request) {
+            ObjectPool<ManagedChannel> channelPool, Function<ManagedChannel, S> stubFactory,
+            BiFunction<S, Q, R> callLogic, Q request) {
         return retryHandler.execute(() -> {
             ManagedChannel channel = ConnectionFactory.acquireChannel(channelPool);
             try {

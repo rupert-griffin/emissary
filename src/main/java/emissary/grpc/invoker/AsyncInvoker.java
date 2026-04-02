@@ -11,6 +11,7 @@ import com.google.protobuf.GeneratedMessageV3;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.AbstractFutureStub;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.apache.commons.pool2.ObjectPool;
 import org.slf4j.Logger;
 
@@ -45,10 +46,8 @@ public class AsyncInvoker extends BaseInvoker {
      * @param <S> the gRPC stub type
      */
     public <Q extends GeneratedMessageV3, R extends GeneratedMessageV3, S extends AbstractFutureStub<S>> CompletableFuture<R> invoke(
-            ObjectPool<ManagedChannel> channelPool,
-            Function<ManagedChannel, S> stubFactory,
-            BiFunction<S, Q, ListenableFuture<R>> callLogic,
-            Q request) {
+            ObjectPool<ManagedChannel> channelPool, Function<ManagedChannel, S> stubFactory,
+            BiFunction<S, Q, ListenableFuture<R>> callLogic, Q request) {
         return retryHandler.executeAsync(() -> {
             ManagedChannel channel = ConnectionFactory.acquireChannel(channelPool);
             try {
@@ -70,7 +69,7 @@ public class AsyncInvoker extends BaseInvoker {
      * @param <R> response type
      * @return handler suitable for {@link CompletableFuture#handle}
      */
-    private <R extends GeneratedMessageV3> CompletionStage<R> handleFuture(
+    private static <R extends GeneratedMessageV3> CompletionStage<R> handleFuture(
             ListenableFuture<R> listenable, ManagedChannel channel, ObjectPool<ManagedChannel> channelPool) {
         return toCompletableFuture(listenable)
                 .handle((response, throwable) -> {
@@ -78,17 +77,8 @@ public class AsyncInvoker extends BaseInvoker {
                         ConnectionFactory.returnChannel(channel, channelPool);
                         return response;
                     }
-                    Throwable cause = unwrapThrowable(throwable);
                     ConnectionFactory.invalidateChannel(channel, channelPool);
-                    if (cause instanceof RuntimeException) {
-                        throw (RuntimeException) cause;
-                    }
-                    throw new IllegalStateException(cause);
-                })
-                .exceptionally(throwable -> {
-                    Throwable cause = unwrapThrowable(throwable);
-                    logger.error(cause.getMessage(), cause);
-                    return null; // Return null instead of throwing exception and ruining entire batch
+                    throw toRuntimeException(unwrapThrowable(throwable));
                 });
     }
 
@@ -116,17 +106,6 @@ public class AsyncInvoker extends BaseInvoker {
     }
 
     /**
-     * Waits for all provided asynchronous computations. This method blocks the calling thread until each
-     * {@link CompletableFuture} in the input has complete.
-     *
-     * @param futures futures representing asynchronous computations
-     * @param <R> result type
-     */
-    public static <R> void awaitAll(Collection<CompletableFuture<R>> futures) {
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-    }
-
-    /**
      * Waits for all provided asynchronous computations to complete and returns their results. This method blocks the
      * calling thread until each {@link CompletableFuture} in the input has complete. If any future completes exceptionally,
      * the corresponding {@link CompletableFuture#join()} call will throw a {@link RuntimeException}, and iteration will
@@ -140,9 +119,24 @@ public class AsyncInvoker extends BaseInvoker {
      */
     public static <R, C extends Collection<R>> C awaitAllAndGet(
             Collection<CompletableFuture<R>> futures, Supplier<? extends C> factory) {
-        awaitAll(futures);
+        return awaitAllAndGet(futures, factory, null);
+    }
+
+    /**
+     * Waits for all provided asynchronous computations to complete and returns their results. This method blocks the
+     * calling thread until each {@link CompletableFuture} in the input has complete.
+     *
+     * @param futures collection of futures representing asynchronous computations
+     * @param factory creates the output collection instance
+     * @param exceptionally function for handling individual future exceptions, throws normally if {@code null}
+     * @return a new collection of the results returned by the asynchronous computations
+     * @param <R> result type
+     * @param <C> collection type
+     */
+    public static <R, C extends Collection<R>> C awaitAllAndGet(
+            Collection<CompletableFuture<R>> futures, Supplier<? extends C> factory, @Nullable Function<Throwable, R> exceptionally) {
         return futures.stream()
-                .map(CompletableFuture::join)
+                .map(future -> get(future, exceptionally))
                 .collect(Collectors.toCollection(factory));
     }
 
@@ -161,9 +155,59 @@ public class AsyncInvoker extends BaseInvoker {
      */
     public static <K, R, M extends Map<K, R>> M awaitAllAndGet(
             Map<K, CompletableFuture<R>> futures, Supplier<? extends M> factory) {
-        awaitAll(futures.values());
+        return awaitAllAndGet(futures, factory, null);
+    }
+
+    /**
+     * Waits for all provided asynchronous computations to complete and returns their results. This method blocks the
+     * calling thread until each {@link CompletableFuture} in the input has complete.
+     *
+     * @param futures map of keys to futures representing asynchronous computations
+     * @param factory creates the output map instance
+     * @param exceptionally function for handling individual future exceptions, throws normally if {@code null}
+     * @return a new map of keys to the results returned by the asynchronous computations
+     * @param <K> key type
+     * @param <R> result type
+     * @param <M> map type
+     */
+    public static <K, R, M extends Map<K, R>> M awaitAllAndGet(
+            Map<K, CompletableFuture<R>> futures, Supplier<? extends M> factory, @Nullable Function<Throwable, R> exceptionally) {
         return futures.entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().join(), (a, b) -> b, factory));
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> get(e.getValue(), exceptionally), (a, b) -> b, factory));
+    }
+
+    /**
+     * Waits for a provided asynchronous computation to complete and then return its results. This method blocks the calling
+     * thread until the {@link CompletableFuture} input has completed.
+     *
+     * @param future future representing an asynchronous computation
+     * @param exceptionally function for handling exceptions thrown by the future, throws normally if {@code null}
+     * @return the result returned by an asynchronous computation
+     * @param <R> result type
+     */
+    private static <R> R get(CompletableFuture<R> future, Function<Throwable, R> exceptionally) {
+        try {
+            if (exceptionally == null) {
+                return future.join();
+            }
+            return future.exceptionally(exceptionally).join();
+        } catch (RuntimeException e) {
+            throw toRuntimeException(unwrapThrowable(e));
+        }
+    }
+
+    /**
+     * If a throwable is not an instance of a {@link RuntimeException}, returns it wrapped with an
+     * {@code IllegalStateException} so that it can be immediately thrown unchecked.
+     *
+     * @param throwable some throwable
+     * @return the throwable as a {@link RuntimeException}
+     */
+    private static RuntimeException toRuntimeException(Throwable throwable) {
+        if (throwable instanceof RuntimeException) {
+            return (RuntimeException) throwable;
+        }
+        return new IllegalStateException(throwable);
     }
 
     /**
