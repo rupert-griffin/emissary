@@ -1,5 +1,6 @@
 package emissary.grpc.invoker;
 
+import emissary.grpc.exceptions.GrpcExceptionUtils;
 import emissary.grpc.pool.ConnectionFactory;
 import emissary.grpc.retry.RetryHandler;
 
@@ -55,7 +56,7 @@ public class AsyncInvoker extends BaseInvoker {
                 return handleFuture(callLogic.apply(stub, request), channel, channelPool);
             } catch (RuntimeException e) {
                 ConnectionFactory.invalidateChannel(channel, channelPool);
-                throw e;
+                throw GrpcExceptionUtils.toContextualRuntimeException(e);
             }
         }).toCompletableFuture();
     }
@@ -78,7 +79,7 @@ public class AsyncInvoker extends BaseInvoker {
                         return response;
                     }
                     ConnectionFactory.invalidateChannel(channel, channelPool);
-                    throw toRuntimeException(unwrapThrowable(throwable));
+                    throw GrpcExceptionUtils.toContextualRuntimeException(unwrapThrowable(throwable));
                 });
     }
 
@@ -192,22 +193,8 @@ public class AsyncInvoker extends BaseInvoker {
             }
             return future.exceptionally(exceptionally).join();
         } catch (RuntimeException e) {
-            throw toRuntimeException(unwrapThrowable(e));
+            throw GrpcExceptionUtils.toContextualRuntimeException(unwrapThrowable(e));
         }
-    }
-
-    /**
-     * If a throwable is not an instance of a {@link RuntimeException}, returns it wrapped with an
-     * {@code IllegalStateException} so that it can be immediately thrown unchecked.
-     *
-     * @param throwable some throwable
-     * @return the throwable as a {@link RuntimeException}
-     */
-    private static RuntimeException toRuntimeException(Throwable throwable) {
-        if (throwable instanceof RuntimeException) {
-            return (RuntimeException) throwable;
-        }
-        return new IllegalStateException(throwable);
     }
 
     /**

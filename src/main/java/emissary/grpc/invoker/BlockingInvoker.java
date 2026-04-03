@@ -1,5 +1,6 @@
 package emissary.grpc.invoker;
 
+import emissary.grpc.exceptions.GrpcExceptionUtils;
 import emissary.grpc.pool.ConnectionFactory;
 import emissary.grpc.retry.RetryHandler;
 
@@ -43,7 +44,7 @@ public class BlockingInvoker extends BaseInvoker {
                 return response;
             } catch (RuntimeException e) {
                 ConnectionFactory.invalidateChannel(channel, channelPool);
-                throw e;
+                throw GrpcExceptionUtils.toContextualRuntimeException(e);
             }
         });
     }

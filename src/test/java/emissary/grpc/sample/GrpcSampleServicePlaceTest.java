@@ -190,7 +190,7 @@ class GrpcSampleServicePlaceTest extends UnitTest {
             Status status = Status.fromCode(code);
             Runnable invocation = () -> samplePlace.throwExceptionsDuringProcess(dataObject, new StatusRuntimeException(status));
             StatusRuntimeException e = assertThrows(StatusRuntimeException.class, invocation::run);
-            assertEquals(e.getMessage(), code.name());
+            assertTrue(e.getMessage().startsWith(code.name()));
             assertTrue(dataObject.getAlternateViewNames().isEmpty());
         }
 
@@ -249,7 +249,7 @@ class GrpcSampleServicePlaceTest extends UnitTest {
                     dataObject, new StatusRuntimeException(status), retryAttempts, attemptNumber);
             StatusRuntimeException e = assertThrows(StatusRuntimeException.class, invocation::run);
 
-            assertEquals(e.getMessage(), code.name());
+            assertTrue(e.getMessage().startsWith(code.name()));
             assertTrue(dataObject.getAlternateViewNames().isEmpty());
             assertEquals(RETRY_ATTEMPTS, attemptNumber.get());
         }
@@ -264,7 +264,7 @@ class GrpcSampleServicePlaceTest extends UnitTest {
                     dataObject, new StatusRuntimeException(status), RETRY_ATTEMPTS, attemptNumber);
             StatusRuntimeException e = assertThrows(StatusRuntimeException.class, invocation::run);
 
-            assertEquals(e.getMessage(), code.name());
+            assertTrue(e.getMessage().startsWith(code.name()));
             assertTrue(dataObject.getAlternateViewNames().isEmpty());
             assertEquals(1, attemptNumber.get());
         }
