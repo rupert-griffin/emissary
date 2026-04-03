@@ -118,9 +118,7 @@ public abstract class GrpcRoutingPlace extends ServiceProviderPlace implements I
     }
 
     private void configureGrpc() {
-        if (configG == null) {
-            throw new IllegalStateException("gRPC configurations not found for " + this.getPlaceName());
-        }
+        Objects.requireNonNull(configG);
 
         hostnameTable.putAll(getHostnameConfigs());
         portNumberTable.putAll(getPortNumberConfigs());
