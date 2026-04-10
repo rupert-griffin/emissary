@@ -6,7 +6,6 @@ import emissary.core.BaseDataObject;
 import emissary.core.IBaseDataObject;
 import emissary.core.constants.Configurations;
 import emissary.grpc.GrpcRoutingPlace;
-import emissary.grpc.pool.PoolException;
 import emissary.grpc.retry.RetryHandler;
 import emissary.grpc.sample.v1.SampleResponse;
 import emissary.test.core.junit5.UnitTest;
@@ -331,8 +330,8 @@ class GrpcSamplePlaceTest extends UnitTest {
                     GrpcSamplePlace place = buildPlaceWithEndpoints(serverOne, serverTwo)) {
 
                 Runnable invocation = () -> Objects.requireNonNull(place).processEndpointsSequentially(o);
-                PoolException exception = assertThrows(PoolException.class, invocation::run);
-                assertEquals("Unable to borrow channel from pool: Unable to validate object", exception.getMessage());
+                StatusRuntimeException exception = assertThrows(StatusRuntimeException.class, invocation::run);
+                assertEquals("UNAVAILABLE: It's likely service crashed", exception.getMessage());
             }
         }
 
@@ -412,8 +411,8 @@ class GrpcSamplePlaceTest extends UnitTest {
                     GrpcSamplePlace place = buildPlaceWithEndpoints(serverOne, serverTwo)) {
 
                 Runnable invocation = () -> Objects.requireNonNull(place).processEndpointsInParallel(o, null);
-                PoolException exception = assertThrows(PoolException.class, invocation::run);
-                assertEquals("Unable to borrow channel from pool: Unable to validate object", exception.getMessage());
+                StatusRuntimeException exception = assertThrows(StatusRuntimeException.class, invocation::run);
+                assertEquals("UNAVAILABLE: It's likely service crashed", exception.getMessage());
             }
         }
 
