@@ -6,7 +6,8 @@ import emissary.core.BaseDataObject;
 import emissary.core.IBaseDataObject;
 import emissary.core.constants.Configurations;
 import emissary.grpc.GrpcRoutingPlace;
-import emissary.grpc.pool.PoolException;
+import emissary.grpc.channel.ChannelManager;
+import emissary.grpc.channel.SingletonChannelManager;
 import emissary.grpc.retry.RetryHandler;
 import emissary.grpc.sample.v1.SampleRequest;
 import emissary.grpc.sample.v1.SampleResponse;
@@ -51,7 +52,8 @@ class GrpcSamplePlaceTest extends UnitTest {
             new ConfigEntry(Configurations.SERVICE_TYPE, "TRANSFORM"),
             new ConfigEntry(Configurations.SERVICE_COST, "50"),
             new ConfigEntry(Configurations.SERVICE_QUALITY, "50"),
-            new ConfigEntry(Configurations.SERVICE_PROXY, "*"));
+            new ConfigEntry(Configurations.SERVICE_PROXY, "*"),
+            new ConfigEntry(ChannelManager.Factory.MANAGER_CLASS_NAME, SingletonChannelManager.class.getName()));
 
     public static final String ENDPOINT_1 = "EP1";
     public static final String ENDPOINT_2 = "EP2";
@@ -365,8 +367,8 @@ class GrpcSamplePlaceTest extends UnitTest {
                 startPlaceWithEndpoints(serverOne, serverTwo);
 
                 Runnable invocation = () -> Objects.requireNonNull(place).processEndpointsSequentially(o);
-                PoolException exception = assertThrows(PoolException.class, invocation::run);
-                assertEquals("Unable to borrow channel from pool: Unable to validate object", exception.getMessage());
+                StatusRuntimeException exception = assertThrows(StatusRuntimeException.class, invocation::run);
+                assertEquals("UNAVAILABLE: It's likely service crashed", exception.getMessage());
             }
         }
 
@@ -484,8 +486,8 @@ class GrpcSamplePlaceTest extends UnitTest {
                 startPlaceWithEndpoints(serverOne, serverTwo);
 
                 Runnable invocation = () -> Objects.requireNonNull(place).processEndpointsInParallel(o, null);
-                PoolException exception = assertThrows(PoolException.class, invocation::run);
-                assertEquals("Unable to borrow channel from pool: Unable to validate object", exception.getMessage());
+                StatusRuntimeException exception = assertThrows(StatusRuntimeException.class, invocation::run);
+                assertEquals("UNAVAILABLE: It's likely service crashed", exception.getMessage());
             }
         }
 
