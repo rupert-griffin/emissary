@@ -102,9 +102,7 @@ public abstract class GrpcRoutingPlace extends ServiceProviderPlace implements I
     }
 
     private void configureGrpc() {
-        if (configG == null) {
-            throw new IllegalStateException("gRPC configurations not found for " + this.getPlaceName());
-        }
+        Objects.requireNonNull(configG);
 
         hostnameTable.putAll(getHostnameConfigs());
         portNumberTable.putAll(getPortNumberConfigs());
@@ -244,7 +242,7 @@ public abstract class GrpcRoutingPlace extends ServiceProviderPlace implements I
      * @param <C> collection type
      */
     protected <R, C extends Collection<R>> C awaitAllAndGet(
-            Collection<CompletableFuture<R>> futures, Supplier<? extends C> factory, Function<Throwable, R> exceptionally) {
+            Collection<CompletableFuture<R>> futures, Supplier<? extends C> factory, @Nullable Function<Throwable, R> exceptionally) {
         return CompletableFutureFinalizers.awaitAllAndGet(futures, factory, exceptionally);
     }
 
@@ -278,7 +276,7 @@ public abstract class GrpcRoutingPlace extends ServiceProviderPlace implements I
      * @param <M> map type
      */
     protected <K, R, M extends Map<K, R>> M awaitAllAndGet(
-            Map<K, CompletableFuture<R>> futures, Supplier<? extends M> factory, Function<Throwable, R> exceptionally) {
+            Map<K, CompletableFuture<R>> futures, Supplier<? extends M> factory, @Nullable Function<Throwable, R> exceptionally) {
         return CompletableFutureFinalizers.awaitAllAndGet(futures, factory, exceptionally);
     }
 
