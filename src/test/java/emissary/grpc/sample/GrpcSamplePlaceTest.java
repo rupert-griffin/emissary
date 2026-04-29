@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -337,6 +338,44 @@ class GrpcSamplePlaceTest extends UnitTest {
         }
 
         @Test
+        void testThreadInterruptCancelsSequentialGrpc() throws InterruptedException {
+            CountDownLatch startedLatch = new CountDownLatch(1);
+            CountDownLatch releaseLatch = new CountDownLatch(1);
+
+            try (GrpcSampleServer serverOne = GrpcSampleServer.blockUntilReleased(startedLatch, releaseLatch);
+                 GrpcSampleServer serverTwo = GrpcSampleServer.defaultBehavior();
+                 GrpcSamplePlace place = buildPlaceWithEndpoints(serverOne, serverTwo)) {
+
+                AtomicReference<Throwable> errorRef = new AtomicReference<>();
+
+                Thread clientThread = new Thread(() -> {
+                    try {
+                        Objects.requireNonNull(place).processEndpointsSequentially(o);
+                    } catch (Throwable t) {
+                        errorRef.set(t);
+                    }
+                });
+
+                clientThread.start();
+
+                assertTrue(startedLatch.await(1, TimeUnit.SECONDS), "Server should have received request");
+                assertNull(errorRef.get());
+
+                clientThread.interrupt();
+                clientThread.join(1000);
+                assertFalse(clientThread.isAlive(), "Client thread should exit after interruption");
+
+                Throwable error = errorRef.get();
+                assertInstanceOf(StatusRuntimeException.class, error);
+                assertEquals(Status.Code.CANCELLED, Status.fromThrowable(error).getCode());
+                assertTrue(o.getAlternateViews().isEmpty());
+            } finally {
+                releaseLatch.countDown();
+            }
+
+        }
+
+        @Test
         void testBlockedResponsesAreProcessedSequentially() throws InterruptedException {
             CountDownLatch startedLatchOne = new CountDownLatch(1);
             CountDownLatch releaseLatchOne = new CountDownLatch(1);
@@ -415,6 +454,44 @@ class GrpcSamplePlaceTest extends UnitTest {
                 PoolException exception = assertThrows(PoolException.class, invocation::run);
                 assertEquals("Unable to borrow channel from pool: Unable to validate object", exception.getMessage());
             }
+        }
+
+        @Test
+        void testThreadInterruptCancelsParallelGrpc() throws InterruptedException {
+            CountDownLatch startedLatch = new CountDownLatch(2);
+            CountDownLatch releaseLatch = new CountDownLatch(1);
+
+            try (GrpcSampleServer serverOne = GrpcSampleServer.blockUntilReleased(startedLatch, releaseLatch);
+                 GrpcSampleServer serverTwo = GrpcSampleServer.blockUntilReleased(startedLatch, releaseLatch);
+                 GrpcSamplePlace place = buildPlaceWithEndpoints(serverOne, serverTwo)) {
+
+                AtomicReference<Throwable> errorRef = new AtomicReference<>();
+
+                Thread clientThread = new Thread(() -> {
+                    try {
+                        Objects.requireNonNull(place).processEndpointsInParallel(o, null);
+                    } catch (Throwable t) {
+                        errorRef.set(t);
+                    }
+                });
+
+                clientThread.start();
+
+                assertTrue(startedLatch.await(2, TimeUnit.SECONDS), "Not all servers received requests");
+                assertNull(errorRef.get());
+
+                clientThread.interrupt();
+                clientThread.join(2000);
+                assertFalse(clientThread.isAlive(), "Client thread should exit after interruption");
+
+                Throwable error = errorRef.get();
+                assertInstanceOf(StatusRuntimeException.class, error);
+                assertEquals(Status.Code.CANCELLED, Status.fromThrowable(error).getCode());
+                assertTrue(o.getAlternateViews().isEmpty());
+            } finally {
+                releaseLatch.countDown();
+            }
+
         }
 
         @Test

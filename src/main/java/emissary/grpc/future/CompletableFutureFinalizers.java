@@ -2,11 +2,13 @@ package emissary.grpc.future;
 
 import emissary.grpc.exceptions.GrpcExceptionUtils;
 
+import io.grpc.Status;
 import jakarta.annotation.Nullable;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -26,8 +28,13 @@ public class CompletableFutureFinalizers {
      */
     public static <R> R awaitAndGet(CompletableFuture<R> future) {
         try {
-            return future.join();
-        } catch (RuntimeException e) {
+            return future.get();
+        } catch (InterruptedException e) {
+            future.cancel(true);
+            Thread.currentThread().interrupt();
+            throw GrpcExceptionUtils.toContextualRuntimeException(
+                    Status.CANCELLED.asRuntimeException());
+        } catch (ExecutionException | RuntimeException e) {
             throw GrpcExceptionUtils.toContextualRuntimeException(
                     GrpcExceptionUtils.unwrapAsyncThrowable(e));
         }

@@ -103,7 +103,7 @@ public class GrpcSampleServer implements AutoCloseable {
                 releaseLatch.await();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new IllegalStateException(e);
+                throw Status.CANCELLED.asRuntimeException();
             }
             return request.getQuery();
         });
