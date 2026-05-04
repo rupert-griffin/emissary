@@ -393,7 +393,7 @@ class GrpcSampleServicePlaceTest extends UnitTest {
                 assertNull(errorRef.get());
 
                 clientThread.interrupt();
-                clientThread.join(1000);
+                clientThread.join(500);
                 assertFalse(clientThread.isAlive(), "Client thread should exit after interruption");
 
                 Throwable error = errorRef.get();
@@ -459,7 +459,7 @@ class GrpcSampleServicePlaceTest extends UnitTest {
                 assertTrue(clientThread.isAlive());
                 releaseLatchTwo.countDown();
 
-                clientThread.join(1000); // Wait for thread to die
+                clientThread.join(500); // Wait for thread to die
                 assertFalse(clientThread.isAlive());
 
                 assertEquals(2, o.getAlternateViews().size());
@@ -514,7 +514,7 @@ class GrpcSampleServicePlaceTest extends UnitTest {
                 assertNull(errorRef.get());
 
                 clientThread.interrupt();
-                clientThread.join(2000);
+                clientThread.join(500);
                 assertFalse(clientThread.isAlive(), "Client thread should exit after interruption");
 
                 Throwable error = errorRef.get();
@@ -573,7 +573,7 @@ class GrpcSampleServicePlaceTest extends UnitTest {
                 assertTrue(clientThread.isAlive());
                 releaseLatch.countDown();
 
-                clientThread.join(1000); // Wait for thread to die
+                clientThread.join(500); // Wait for thread to die
                 assertFalse(clientThread.isAlive());
 
                 assertEquals(2, o.getAlternateViews().size());
