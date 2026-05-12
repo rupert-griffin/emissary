@@ -110,7 +110,7 @@ public abstract class GrpcRoutingPlace extends ServiceProviderPlace implements I
         RetryHandler retryHandler = new RetryHandler(configG, this.getPlaceName(), this::retryOnException);
         ChannelManager.Factory managerFactory = new ChannelManager.Factory(configG, this::validateConnection);
         for (String id : targetIds) {
-            ChannelManager channelManager = managerFactory.build(hosts.get(id), ports.get(id));
+            ChannelManager channelManager = managerFactory.build(id, hosts.get(id), ports.get(id));
             invokerTable.put(id, new GrpcInvoker(channelManager, retryHandler));
         }
     }

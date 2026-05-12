@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Constructor;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -41,6 +42,7 @@ public abstract class ChannelManager implements AutoCloseable {
 
     protected final ChannelValidator validator;
 
+    protected final String id;
     protected final String host;
     protected final int port;
     protected final String target;
@@ -55,6 +57,7 @@ public abstract class ChannelManager implements AutoCloseable {
      * Constructs a new gRPC connection manager using the provided host, port, and configuration. Initializes gRPC channel
      * properties from the given configuration source.
      *
+     * @param id internal target ID for the gRPC endpoint
      * @param host gRPC service hostname or DNS target
      * @param port gRPC service port
      * @param configG configuration provider for channel parameters
@@ -63,9 +66,10 @@ public abstract class ChannelManager implements AutoCloseable {
      * @see <a href="https://docs.microsoft.com/en-us/aspnet/core/grpc/performance?view=aspnetcore-5.0">Source</a> for
      *      default gRPC configurations.
      */
-    protected ChannelManager(String host, int port, Configurator configG, ChannelValidator validator) {
+    protected ChannelManager(String id, String host, int port, Configurator configG, ChannelValidator validator) {
         this.logger = LoggerFactory.getLogger(this.getClass().getName());
 
+        this.id = id;
         this.host = host;
         this.port = port;
         this.target = host + ":" + port; // target may be a host or dns service
@@ -99,7 +103,7 @@ public abstract class ChannelManager implements AutoCloseable {
      *
      * @return a new gRPC channel
      */
-    protected final ManagedChannel create() {
+    protected final ManagedChannel create(Map<String, Object> serviceConfigs) {
         ManagedChannel channel = ManagedChannelBuilder.forTarget(this.target)
                 .keepAliveTime(this.keepAliveMillis, TimeUnit.MILLISECONDS)
                 .keepAliveTimeout(this.keepAliveTimeoutMillis, TimeUnit.MILLISECONDS)
@@ -107,6 +111,7 @@ public abstract class ChannelManager implements AutoCloseable {
                 .defaultLoadBalancingPolicy(this.loadBalancingPolicy)
                 .maxInboundMessageSize(this.maxInboundMessageByteSize)
                 .maxInboundMetadataSize(this.maxInboundMetadataByteSize)
+                .defaultServiceConfig(serviceConfigs)
                 .usePlaintext().build();
         if (validator.test(channel)) {
             return channel;
@@ -115,8 +120,6 @@ public abstract class ChannelManager implements AutoCloseable {
     }
 
     public abstract ManagedChannel acquire();
-
-    public abstract void release(ManagedChannel channel);
 
     public abstract void shutdown(ManagedChannel channel);
 
@@ -171,22 +174,22 @@ public abstract class ChannelManager implements AutoCloseable {
             try {
                 return Class.forName(className)
                         .asSubclass(ChannelManager.class)
-                        .getDeclaredConstructor(String.class, int.class, Configurator.class, ChannelValidator.class);
+                        .getDeclaredConstructor(String.class, String.class, int.class, Configurator.class, ChannelValidator.class);
             } catch (ClassNotFoundException e) {
                 throw new IllegalArgumentException("Cannot find class: " + className, e);
             } catch (NoSuchMethodException e) {
                 throw new IllegalStateException(
                         String.format(
-                                "Missing required constructor: %s(%s, %s, %s, %s)",
-                                className, String.class.getName(), int.class.getName(),
+                                "Missing required constructor: %s(%s, %s, %s, %s, %s)",
+                                className, String.class.getName(), String.class.getName(), int.class.getName(),
                                 Configurator.class.getName(), ChannelValidator.class.getName()),
                         e);
             }
         }
 
-        public ChannelManager build(String host, int port) {
+        public ChannelManager build(String id, String host, int port) {
             try {
-                return constructor.newInstance(host, port, configG, validator);
+                return constructor.newInstance(id, host, port, configG, validator);
             } catch (ReflectiveOperationException e) {
                 throw new IllegalStateException("Unable to instantiate " + constructor.getDeclaringClass().getName(), e);
             }

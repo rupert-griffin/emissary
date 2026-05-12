@@ -7,7 +7,7 @@ import emissary.core.IBaseDataObject;
 import emissary.core.constants.Configurations;
 import emissary.grpc.GrpcRoutingPlace;
 import emissary.grpc.channel.ChannelManager;
-import emissary.grpc.channel.SingletonChannelManager;
+import emissary.grpc.channel.PooledChannelManager;
 import emissary.grpc.retry.RetryHandler;
 import emissary.grpc.sample.v1.SampleRequest;
 import emissary.grpc.sample.v1.SampleResponse;
@@ -53,7 +53,7 @@ class GrpcSamplePlaceTest extends UnitTest {
             new ConfigEntry(Configurations.SERVICE_COST, "50"),
             new ConfigEntry(Configurations.SERVICE_QUALITY, "50"),
             new ConfigEntry(Configurations.SERVICE_PROXY, "*"),
-            new ConfigEntry(ChannelManager.Factory.MANAGER_CLASS_NAME, SingletonChannelManager.class.getName()));
+            new ConfigEntry(ChannelManager.Factory.MANAGER_CLASS_NAME, PooledChannelManager.class.getName()));
 
     public static final String ENDPOINT_1 = "EP1";
     public static final String ENDPOINT_2 = "EP2";
